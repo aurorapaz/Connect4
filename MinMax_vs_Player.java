@@ -1,12 +1,18 @@
 import java.util.Scanner;
 
 public class MinMax_vs_Player {
+	
+	
+	 public static final int MAX_WINNING_SCORE = 999999;
+	 public static final int MIN_WINNING_SCORE = -999999;
 
+	 static int turno = 1;
+	 static char[][] tablero = new char[6][7];
+	 static int maxDepth=4;
+	
 	public static void main(String[] args) {
 		Scanner teclado_introducir_columna = new Scanner(System.in);
 
-		char[][] tablero = new char[6][7];
-		int turno = 1;
 		char player1 = '+';
 		char player2 = '0';
 		boolean winner = false;
@@ -49,17 +55,16 @@ public class MinMax_vs_Player {
 			turno++;
 
 			// Juega JUGADOR 2
-			int mMaxDepth2=3; //AJUSTABLE
-			char [][] tableroaux=new char[6][7];
+			char [][] tableroaux=new char[7][6];
 			for(int col = 0; col < 7; col++) {
 				for(int fil=0;fil<6;fil++) {
-					tableroaux[fil][col]=tablero[fil][col];
+tableroaux[col][fil]=tablero[fil][col];
 				}
 			}
 			
 			do {
 				System.out.println("Turno de MINMAX5: ");
-				columnaEscogida=movimientoAI('0', '+', -10000, 10000, mMaxDepth2,tableroaux)[0];
+				columnaEscogida=maxPlay(tableroaux, 0, Integer.MIN_VALUE, Integer.MAX_VALUE)[0];
 				columnaValida = validarColumna(columnaEscogida, tablero);
 
 			} while (columnaValida == false);
@@ -86,69 +91,166 @@ public class MinMax_vs_Player {
 		teclado_introducir_columna.close();
 
 	}
+	 public static boolean isDone(int depth, char[][] board, int score)
+	    {
+	        return depth >= maxDepth || turno > 42 || score >= MAX_WINNING_SCORE || score <= MIN_WINNING_SCORE;
+	    }
+	private static int[] maxPlay(char[][] board, int depth, int alpha, int beta)
+    {
+        int score = calcScore('0',board);
 
-	 //MIN MAX RECURSIVO
-    private static int[] movimientoAI(char player, char opponent,
-                            int alpha, int beta, int depth, char[][] tableroaux) {
-        int bestColumn=-1;
-        int bestScore= player == '0' ? alpha : beta;
-        //Va recorriendo de izquierda a derecha buscando una columna que no este llena
-        for (int i = 0; i < 7; i++) {
-            if (freeCells(i,tableroaux) > 0) {
-                ////Añadimos a esa columna y miramos si tenemos oportunidad de ganar
-            	for (int fila = tableroaux.length - 1; fila >= 0; fila--) {
-        			if (tableroaux[fila][i] == ' ') {
-        				tableroaux[fila][i] = player;
-        				break;
-        			}
-        		}
-                //Mira el movimiento y sus hijos
-                int score = 0;
-                if (ganador(player,tableroaux)) {
-                    //Con esta jugada gana
-                    score = player == '0' ? 1 : -1;
-                } else if (depth != 1) {
-                    //Con esta jugada no gana asi que va a la siguiente
-                    score = movimientoAI(opponent, player, alpha, beta,
-                            depth - 1,tableroaux)[1];
+        if (isDone(depth, board, score))
+            return new int[]{-1, score};
+
+        int[] max = new int[]{-1, 0};
+
+        for (int column = 0; column < 7; column++) {
+
+			char [][] new_board=new char[7][6];
+			for(int col = 0; col < 7; col++) {
+				for(int fil=0;fil<6;fil++) {
+					new_board[col][fil]=board[col][fil];
+				}
+			}
+            if (place(column, true,new_board)) {
+                int[] next = minPlay(new_board, depth + 1, alpha, beta);
+
+                if (max[0] == -1 || next[1] > max[1]) {
+                    max[0] = column;
+                    max[1] = next[1];
+                    alpha = next[1];
                 }
-                //Deshace la jugada
-                for (int fila = tableroaux.length - 1; fila >= 0; fila--) {
-        			if (tableroaux[fila][i] == ' ') {
-        				tableroaux[fila+1][i] = ' ';
-        				break;
-        			}
-        		}
-                
-                if (player == '0' && score > bestScore) {
-                    bestColumn=i;
-                    bestScore=score;
-                    alpha = score;
-                } else if (player == '+' && score < bestScore) {
-                    bestColumn=i;
-                    bestScore=score;
-                    beta = score;
-                }
-                //Ya se encontro
-                if (alpha >= beta) {
-                    return new int []{bestColumn,bestScore};
-                }
+
+                if(beta <= alpha)
+                    return max;
             }
         }
-       return new int []{bestColumn,bestScore};
-    }
-    
-    public static int freeCells(int column, char[][] tablero) {
-    	int libres=0;
-    	for (int fila = tablero.length - 1; fila >= 0; fila--) {
-			if (tablero[fila][column] == ' ') {
-				libres++;
-				break;
-			}
-		}
-    	return libres;
+
+        return max;
     }
 	
+	 private static int[] minPlay(char[][] board, int depth, int alpha, int beta)
+	    {
+	        int score = calcScore('+',board);
+
+	        if (isDone(depth, board, score))
+	            return new int[]{-1, score};
+
+	        int[] min = new int[]{-1, 0};
+
+	        for (int column = 0; column < 7; column++) {
+
+				char [][] new_board=new char[7][6];
+				for(int col = 0; col < 7; col++) {
+					for(int fil=0;fil<6;fil++) {
+						new_board[col][fil]=board[col][fil];
+					}
+				}
+	            if (place(column, false,new_board)) {
+	                int[] next = maxPlay(new_board, depth + 1, alpha, beta);
+
+	                if (min[0] == -1 || next[1] < min[1]) {
+	                    min[0] = column;
+	                    min[1] = next[1];
+	                    beta = next[1];
+	                }
+
+	                if(beta <= alpha)
+	                    return min;
+	            }
+	        }
+
+	        return min;
+	    }
+	 
+	    public static boolean place(int col, boolean isMax, char[][] board)
+	    {
+	        if (board[col][0] == ' ' && col >= 0 && col < 7) {
+	            for (int y = 6 - 1; y >= 0; y--) {
+	                if (board[col][y] == ' ') {
+	                    board[col][y] = isMax ? '0' : '+';
+	                    break;
+	                }
+	            }
+	            return true;
+	        } else {
+	            return false;
+	        }
+	    }
+	 
+	 public static int calcScore(char minMax, char[][] board)
+	    {
+	        int vertical_points=0, horizontal_points=0, descDiagonal_points=0, ascDiagonal_points=0, total_points=0;
+
+	        for (int row = 0; row < 6 - 3; row++) {
+	            for (int column = 0; column < 7; column++) {
+	                int tempScore = calcScorePosition(row, column, 1, 0,minMax,board);
+	                vertical_points += tempScore;
+	                if(tempScore >= MAX_WINNING_SCORE || tempScore <= MIN_WINNING_SCORE)
+	                    return tempScore;
+	            }
+	        }
+
+	        for (int row = 0; row < 6 ; row++) {
+	            for (int column = 0; column < 7 - 3; column++) {
+	                int tempScore = calcScorePosition(row, column, 0, 1,minMax,board);
+	                horizontal_points += tempScore;
+	                if(tempScore >= MAX_WINNING_SCORE || tempScore <= MIN_WINNING_SCORE)
+	                    return tempScore;
+	            }
+	        }
+
+	        for (int row = 0; row < 6 - 3 ; row++) {
+	            for (int column = 0; column < 7 - 3; column++) {
+	                int tempScore = calcScorePosition(row, column, 1, 1,minMax,board);
+	                descDiagonal_points += tempScore;
+	                if(tempScore >= MAX_WINNING_SCORE || tempScore <= MIN_WINNING_SCORE)
+	                    return tempScore;
+	            }
+	        }
+
+	        for (int row = 3; row < 6  ; row++) {
+	            for (int column = 0; column < 7 - 4; column++) {
+	                int tempScore = calcScorePosition(row, column, -1, 1,minMax,board);
+	                ascDiagonal_points += tempScore;
+	                if(tempScore >= MAX_WINNING_SCORE || tempScore <= MIN_WINNING_SCORE)
+	                    return tempScore;
+	            }
+	        }
+
+	        total_points = vertical_points + horizontal_points + descDiagonal_points + ascDiagonal_points;
+	        return total_points;
+	    }
+
+
+	    private static int calcScorePosition(int row, int column, int increment_row, int increment_col, char minMax,char[][] board)
+	    {
+	        int ai_points = 0, player_points = 0;
+
+	        for (int i = 0; i < 4; i++) //connect "4"
+	        {
+	            if(board[column][row] == '0')
+	            {
+	                ai_points++;
+	            }
+	            else if (board[column][row] == '+')
+	            {
+	                player_points++;
+	            }
+
+	            row += increment_row;
+	            column += increment_col;
+	        }
+
+	        if(player_points == 4)
+	            return MIN_WINNING_SCORE;
+	        else if(ai_points == 4)
+	            return MAX_WINNING_SCORE;
+	        else
+	            return ai_points;
+	    }
+
+	 
 	
 	// Introduce Ficha en la Columna Elegida comprobando cual es la posicion libre
 	// más baja de la columna
